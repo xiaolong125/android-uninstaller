@@ -1,5 +1,7 @@
 # Android 卸载助手
 
+同时提供 macOS DMG 和 Android Shizuku 版 APK。Android 源码与使用说明见 [`android-app/`](android-app/README.md)。
+
 从本仓库的 **Releases** 下载 `Android卸载助手.dmg`，双击打开后，将应用拖入 **Applications（应用程序）** 即可安装。
 
 适用于 Apple Silicon Mac（M 系列芯片），macOS 13 或更新版本。已内置 ADB 和 uninstall-user0.jar，无需手动上传或设置终端环境。当前版本 1.2.0。
