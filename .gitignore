@@ -1,0 +1,13 @@
+.DS_Store
+*.dmg
+*.zip
+*.app/
+work/
+*.class
+build/
+.gradle/
+local.properties
+*.jks
+*.keystore
+Resources/adb
+Resources/AppIcon.icns

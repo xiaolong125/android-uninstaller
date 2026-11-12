@@ -46,9 +46,11 @@ ADB 的第三方许可见源码资源目录中的 `ADB-NOTICE.txt`。
 - `Tests.swift`：11 项模拟 ADB 工作流测试，不操作真实设备。
 - `Resources/AppLabels.java`：只读的应用名称和图标辅助工具源码。
 - `Resources/UninstallForUser0.java`：用户 0 卸载工具源码。
-- `Resources/`：DEX JAR、应用图标及 ADB 许可声明。ADB 二进制不存入 Git，构建脚本优先复用本机 ADB，缺失时从 Google 官方平台工具包获取。发布的 DMG 已内置 ADB。
+- `Resources/`：DEX JAR、ADB 许可声明。ADB 二进制不存入 Git，构建脚本优先复用本机 ADB，缺失时从 Google 官方平台工具包获取。发布的 DMG 已内置 ADB。
 
 Java 工具已预编译内置；常规 Mac 构建不需要 Android SDK。修改 Java 工具时，需要 JDK 和 Android SDK，使用 `javac`（目标 Java 8）、SDK `android.jar` 和 build-tools 的 `d8` 生成 `classes.dex`，再使用 `jar` 封装并替换对应资源。
+
+Mac 图标由 `tools/MakeIcon.swift` 在构建时生成。
 
 ## 验证
 
