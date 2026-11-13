@@ -6,7 +6,7 @@
 
 1. 从 [Shizuku 官网](https://shizuku.rikka.app/download/) 安装 Shizuku。
 2. 按 Shizuku 引导启动服务：Android 11 或更新版本可使用无线调试；也可使用电脑 ADB 启动。已 Root 的设备可在 Shizuku 中选择 Root 启动。
-3. 安装本项目 Release 中的 `Android卸载助手-Shizuku-1.0.0.apk`。
+3. 安装本项目 Release 中的 `android-uninstaller-shizuku-v1.0.1.apk`。
 4. 打开卸载助手，点击“连接 / 授权”，允许 Shizuku 权限。
 5. 按应用名称或包名搜索。点击应用，核对完整包名后确认卸载；长按应用可复制包名。
 
@@ -34,6 +34,7 @@ Release 默认生成未签名 APK，需要使用自己的密钥通过 Android SD
 
 ## 验证
 
+- 1.0.1 修复桌面图标的额外白色底板和缩放，支持自适应图标及 Android 13 主题图标；已覆盖安装到真机和模拟器。
 - 6 项单元测试：中文名称搜索、英文不区分大小写搜索、包名搜索、空搜索、非法包名拦截和完整包名核对。
 - Gradle 构建和 Lint 错误检查通过。
 - Pixel 6 实测：安装官方 Shizuku 13.6.0，授权、连接服务后，从 APK 界面成功卸载用户指定的 `com.part.sunfics`；界面与 ADB 均核对正式包已移除，同名前缀的 `com.part.sunfics.test` 仍安装。
