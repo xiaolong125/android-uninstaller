@@ -2,6 +2,12 @@
 
 原生 Android APK，支持 Android 9 或更新版本，仅处理主用户（用户 0）。无需连接 Mac 即可浏览和搜索应用；卸载操作需要 Shizuku 13 或更新版本的授权服务。
 
+## 界面
+
+1.1.0 使用官方 Material Components 的 Material 3 主题和组件，支持跟随系统的浅色 / 深色模式。首页提供 Shizuku 连接状态、可清空的名称 / 包名搜索、“全部 / 用户应用 / 系统应用”筛选和真实应用图标；右上角可查看与复制日志。卸载前使用 Material 确认弹窗提示包名及数据删除风险，受保护的应用会单独标注。
+
+小屏、大字体和横屏下顶部区域可滚动，连接按钮按可用空间纵向排列，给应用列表保留空间；宽屏内容居中显示。
+
 ## 使用
 
 1. 从 [Shizuku 官网](https://shizuku.rikka.app/download/) 安装 Shizuku。
@@ -12,7 +18,7 @@
 
 卸载会删除用户 0 下该应用的数据。系统应用仍可能保留系统分区中的本体；卸载系统组件可能影响手机功能。Shizuku 在手机重启后可能需要重新启动。
 
-本工具会先检查精确包名，再调用与 Mac 版原始 JAR 相同的 `deletePackageVersioned` 接口（user 0 / flags 4），等待系统回调，最后重新查询核对。Android 版通过 Shizuku UserService 执行，不需要上传临时 JAR。
+本工具会先检查精确包名，再调用与 Mac 版原始 JAR 相同的 `deletePackageVersioned` 接口（user 0 / flags 4），等待系统回调，最后重新查询核对。1.0.2 起，前后检查均直接读取 PackageManager 返回的用户 0 安装标记，不再依赖可能被模拟器过滤的 `pm list packages`；查询异常会报错，不视为已卸载。Android 版通过 Shizuku UserService 执行，不需要上传临时 JAR。
 
 只有自身应用 UID 或 shell/root 可以调用服务；服务使用非守护模式，随客户端进程退出而停止。本工具和 Shizuku 自身禁止通过工具卸载。应用未声明 Internet 权限，不向服务器上传已安装应用列表。
 
@@ -34,6 +40,9 @@ Release 默认生成未签名 APK，需要使用自己的密钥通过 Android SD
 
 ## 验证
 
+- 1.1.0：构建、6 项单元测试和 Lint 通过；模拟器验证主界面、用户 / 系统筛选、空搜索结果、清空搜索、深色模式、日志弹窗及窄屏大字体下的纵向按钮布局。
+
+- 1.0.2 在 MuMu 模拟器上验证：`pm list packages` 缺失的 `com.mumu.store`、`com.mumu.minigame` 均能被新逻辑识别为已安装，不存在的包识别为未安装。此项验证不执行游戏中心卸载。
 - 1.0.1 修复桌面图标的额外白色底板和缩放，支持自适应图标及 Android 13 主题图标；已覆盖安装到真机和模拟器。
 - 6 项单元测试：中文名称搜索、英文不区分大小写搜索、包名搜索、空搜索、非法包名拦截和完整包名核对。
 - Gradle 构建和 Lint 错误检查通过。
@@ -41,5 +50,7 @@ Release 默认生成未签名 APK，需要使用自己的密钥通过 Android SD
 - 该次真机测试的 Shizuku 实际以 Root 模式运行；未 Root 的 shell 模式尚未在本次测试中验证。不同系统的内部接口兼容性仍需实机验证。
 
 ## 依赖
+
+Material Components 1.8.0，遵循 [Apache License 2.0](https://github.com/material-components/material-components-android/blob/1.8.0/LICENSE)。
 
 Shizuku API / Provider 13.1.5，遵循 [Shizuku API 的 MIT 许可](https://github.com/RikkaApps/Shizuku-API/blob/master/LICENSE)。官方 Shizuku 管理器不包含在本 APK 内。

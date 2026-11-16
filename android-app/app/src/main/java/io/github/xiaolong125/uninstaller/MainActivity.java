@@ -16,7 +16,7 @@ import java.util.*;
 import java.util.concurrent.*;
 import rikka.shizuku.Shizuku;
 
-public final class MainActivity extends Activity {
+public final class MainActivity extends androidx.appcompat.app.AppCompatActivity {
     private final ExecutorService worker = Executors.newSingleThreadExecutor();
     private final Handler main = new Handler(Looper.getMainLooper());
     private final ArrayList<AppEntry> apps = new ArrayList<>(), visible = new ArrayList<>();
@@ -30,7 +30,11 @@ public final class MainActivity extends Activity {
     private IUninstallService service;
     private Shizuku.UserServiceArgs serviceArgs;
     private boolean busy, binding, destroyed;
-    private static final int GREEN = Color.rgb(8,127,117), INK = Color.rgb(28,45,57);
+    private int GREEN, INK, muted, errorColor;
+    private int appFilter;
+    private TextView connectionHint;
+    private View empty;
+    private com.google.android.material.card.MaterialCardView connectionCard;
     private final Shizuku.OnBinderReceivedListener received = () -> main.post(this::updateConnection);
     private final Shizuku.OnBinderDeadListener died = () -> main.post(() -> { service = null; binding = false; updateConnection(); addLog("Shizuku 已断开，请重新启动后连接。"); });
     private final Shizuku.OnRequestPermissionResultListener permission = (request, grant) -> main.post(() -> {
@@ -68,62 +72,89 @@ public final class MainActivity extends Activity {
         TextView view = new TextView(this); view.setText(value); view.setTextSize(sp); view.setTextColor(INK);
         if (bold) view.setTypeface(null, Typeface.BOLD); return view;
     }
-    private LinearLayout column() { LinearLayout view = new LinearLayout(this); view.setOrientation(LinearLayout.VERTICAL); return view; }
     private void buildUI() {
-        LinearLayout root = column(); root.setBackgroundColor(Color.rgb(245,247,249));
-        root.setPadding(dp(20), dp(12), dp(20), 0);
-        if (Build.VERSION.SDK_INT >= 30) getWindow().setDecorFitsSystemWindows(false);
-        root.setOnApplyWindowInsetsListener((v, insets) -> {
-            int left, top, right, bottom;
-            if (Build.VERSION.SDK_INT >= 30) {
-                Insets bars = insets.getInsets(WindowInsets.Type.systemBars() | WindowInsets.Type.displayCutout() | WindowInsets.Type.ime());
-                left=bars.left; top=bars.top; right=bars.right; bottom=bars.bottom;
-            } else { left=insets.getSystemWindowInsetLeft(); top=insets.getSystemWindowInsetTop(); right=insets.getSystemWindowInsetRight(); bottom=insets.getSystemWindowInsetBottom(); }
-            v.setPadding(dp(20)+left,dp(12)+top,dp(20)+right,bottom); return insets;
+        GREEN = getColor(R.color.primary); INK = getColor(R.color.on_surface);
+        muted = getColor(R.color.on_surface_variant); errorColor = getColor(R.color.error);
+        androidx.core.view.WindowCompat.setDecorFitsSystemWindows(getWindow(), false);
+        setContentView(R.layout.activity_main);
+        View root = findViewById(R.id.root);
+        View content = findViewById(R.id.content);
+        ScrollView header = findViewById(R.id.header_scroll);
+        androidx.core.view.ViewCompat.setOnApplyWindowInsetsListener(root, (view, insets) -> {
+            androidx.core.graphics.Insets bars = insets.getInsets(androidx.core.view.WindowInsetsCompat.Type.systemBars()
+                | androidx.core.view.WindowInsetsCompat.Type.displayCutout() | androidx.core.view.WindowInsetsCompat.Type.ime());
+            view.setPadding(bars.left, bars.top, bars.right, bars.bottom);
+            return insets;
         });
-        getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR | View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR);
-        LinearLayout title = new LinearLayout(this); title.setGravity(Gravity.CENTER_VERTICAL);
-        ImageView mark = new ImageView(this); mark.setImageResource(io.github.xiaolong125.uninstaller.R.drawable.ic_launcher);
-        title.addView(mark, new LinearLayout.LayoutParams(dp(42), dp(42)));
-        LinearLayout heading = column(); heading.setPadding(dp(12),0,0,0);
-        heading.addView(text("Android 卸载助手",22,true)); heading.addView(text("Shizuku 版 · 仅处理用户 0",12,false)); title.addView(heading);
-        root.addView(title); space(root,12);
-        LinearLayout card = column(); card.setPadding(dp(14),dp(10),dp(14),dp(10));
-        GradientDrawable bg = new GradientDrawable(); bg.setColor(Color.WHITE); bg.setCornerRadius(dp(16)); card.setBackground(bg);
-        shizukuState = text("正在检查 Shizuku…",14,true); card.addView(shizukuState);
-        LinearLayout actions = new LinearLayout(this);
-        authorize = new Button(this); authorize.setText("连接 / 授权"); authorize.setOnClickListener(v -> connect());
-        Button open = new Button(this); open.setText("打开 Shizuku"); open.setOnClickListener(v -> openShizuku());
-        actions.addView(authorize,new LinearLayout.LayoutParams(0,dp(48),1)); actions.addView(open,new LinearLayout.LayoutParams(0,dp(48),1)); card.addView(actions); root.addView(card);
-        space(root,8);
-        search = new EditText(this); search.setSingleLine(true); search.setTextSize(15); search.setHint("搜索应用名称或包名");
-        search.setInputType(android.text.InputType.TYPE_CLASS_TEXT | android.text.InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS);
-        root.addView(search,new LinearLayout.LayoutParams(-1,dp(52)));
+        androidx.core.view.WindowInsetsControllerCompat bars = androidx.core.view.WindowCompat.getInsetsController(getWindow(), root);
+        bars.setAppearanceLightStatusBars(getResources().getBoolean(R.bool.light_system_bars));
+        bars.setAppearanceLightNavigationBars(getResources().getBoolean(R.bool.light_system_bars));
+        Runnable resize = () -> {
+            int width = Math.min(dp(760), root.getWidth() - root.getPaddingLeft() - root.getPaddingRight());
+            if (width > 0 && content.getLayoutParams().width != width) {
+                ViewGroup.LayoutParams params = content.getLayoutParams(); params.width = width; content.setLayoutParams(params);
+            }
+            LinearLayout actions = findViewById(R.id.connection_actions);
+            boolean stacked = width < dp(360) || getResources().getConfiguration().fontScale > 1.2f;
+            int orientation = stacked ? LinearLayout.VERTICAL : LinearLayout.HORIZONTAL;
+            if (actions.getOrientation() != orientation) {
+                actions.setOrientation(orientation);
+                View secondary = findViewById(R.id.open_shizuku);
+                LinearLayout.LayoutParams params = (LinearLayout.LayoutParams)secondary.getLayoutParams();
+                params.setMarginStart(stacked ? 0 : dp(8)); params.topMargin = stacked ? dp(4) : 0;
+                secondary.setLayoutParams(params);
+            }
+            int available = root.getHeight() - root.getPaddingTop() - root.getPaddingBottom();
+            int natural = header.getChildAt(0).getMeasuredHeight();
+            int height = Math.min(natural, Math.max(dp(96), available - dp(243)));
+            if (height > 0 && header.getLayoutParams().height != height) {
+                ViewGroup.LayoutParams params = header.getLayoutParams(); params.height = height; header.setLayoutParams(params);
+            }
+        };
+        root.addOnLayoutChangeListener((v,l,t,r,b,ol,ot,or,ob) -> resize.run());
+        header.getChildAt(0).addOnLayoutChangeListener((v,l,t,r,b,ol,ot,or,ob) -> resize.run());
+        com.google.android.material.appbar.MaterialToolbar toolbar = findViewById(R.id.toolbar);
+        MenuItem logItem = toolbar.getMenu().add("执行日志").setIcon(R.drawable.ic_log);
+        logItem.setIconTintList(android.content.res.ColorStateList.valueOf(INK));
+        logItem.setShowAsAction(MenuItem.SHOW_AS_ACTION_ALWAYS);
+        toolbar.setOnMenuItemClickListener(item -> { showLogs(); return true; });
+        shizukuState = findViewById(R.id.connection_state); connectionHint = findViewById(R.id.connection_hint);
+        connectionCard = findViewById(R.id.connection_card);
+        authorize = findViewById(R.id.authorize); authorize.setOnClickListener(v -> connect());
+        findViewById(R.id.open_shizuku).setOnClickListener(v -> openShizuku());
+        search = findViewById(R.id.search);
         search.addTextChangedListener(new TextWatcher() { public void beforeTextChanged(CharSequence s,int a,int c,int f) {} public void onTextChanged(CharSequence s,int a,int b,int c) { filter(); } public void afterTextChanged(Editable e) {} });
-        LinearLayout tools = new LinearLayout(this); tools.setGravity(Gravity.CENTER_VERTICAL);
-        count = text("正在读取应用…",13,false); tools.addView(count,new LinearLayout.LayoutParams(0,-2,1));
-        refresh = new Button(this); refresh.setText("刷新"); refresh.setOnClickListener(v -> loadApps()); tools.addView(refresh);
-        Button logButton = new Button(this); logButton.setText("日志"); logButton.setOnClickListener(v -> showLogs()); tools.addView(logButton); root.addView(tools);
-        progress = new ProgressBar(this,null,android.R.attr.progressBarStyleHorizontal); progress.setIndeterminate(true); progress.setVisibility(View.GONE); root.addView(progress,new LinearLayout.LayoutParams(-1,dp(3)));
-        result = text("点击应用后确认卸载。卸载会删除用户 0 的应用数据。",13,false); result.setPadding(0,dp(6),0,dp(8)); root.addView(result);
-        adapter = new AppAdapter(); list = new ListView(this); list.setAdapter(adapter); list.setDivider(null); list.setClipToPadding(false); list.setPadding(0,0,0,dp(12));
+        search.setOnEditorActionListener((v, action, event) -> {
+            if (action != android.view.inputmethod.EditorInfo.IME_ACTION_SEARCH) return false;
+            ((android.view.inputmethod.InputMethodManager)getSystemService(INPUT_METHOD_SERVICE)).hideSoftInputFromWindow(search.getWindowToken(),0);
+            search.clearFocus(); return true;
+        });
+        com.google.android.material.chip.ChipGroup filters = findViewById(R.id.filters);
+        filters.setOnCheckedStateChangeListener((group, checked) -> {
+            appFilter = checked.contains(R.id.filter_system) ? 2 : checked.contains(R.id.filter_user) ? 1 : 0; filter();
+        });
+        count = findViewById(R.id.count); refresh = findViewById(R.id.refresh); refresh.setOnClickListener(v -> loadApps());
+        progress = findViewById(R.id.progress); result = findViewById(R.id.result); empty = findViewById(R.id.empty);
+        list = findViewById(R.id.app_list); adapter = new AppAdapter(); list.setAdapter(adapter);
         list.setOnItemClickListener((p,v,position,id) -> confirm(visible.get(position)));
         list.setOnItemLongClickListener((p,v,position,id) -> { ((ClipboardManager)getSystemService(CLIPBOARD_SERVICE)).setPrimaryClip(ClipData.newPlainText("包名",visible.get(position).pkg)); Toast.makeText(this,"包名已复制",Toast.LENGTH_SHORT).show(); return true; });
-        root.addView(list,new LinearLayout.LayoutParams(-1,0,1)); setContentView(root);
+        androidx.core.view.ViewCompat.requestApplyInsets(root);
     }
-    private void space(LinearLayout root, int height) { root.addView(new View(this),new LinearLayout.LayoutParams(1,dp(height))); }
     private boolean ownerUser() { return android.os.Process.myUid()/100000 == 0; }
     private void updateConnection() {
         if (destroyed) return;
         boolean alive = Shizuku.pingBinder();
         String message = !ownerUser() ? "请在主用户（用户 0）中运行" : !alive ? "Shizuku 未运行" : binding ? "正在连接卸载服务…" : service != null ? "Shizuku 已连接 · 可卸载" : "Shizuku 已运行 · 请连接授权";
         shizukuState.setText(message); shizukuState.setTextColor(service != null ? GREEN : INK);
-        authorize.setEnabled(!busy && !binding && ownerUser());
+        connectionHint.setText(service != null ? "已授权 · 仅处理主用户下的应用" : "浏览无需授权，卸载前请连接 Shizuku");
+        authorize.setText(service != null ? "已连接" : binding ? "连接中…" : "连接 / 授权");
+        connectionCard.setCardBackgroundColor(getColor(service != null ? R.color.primary_container : R.color.secondary_container));
+        authorize.setEnabled(!busy && !binding && ownerUser() && service == null);
     }
     private void openShizuku() {
         Intent launch = getPackageManager().getLaunchIntentForPackage("moe.shizuku.privileged.api");
         if (launch != null) { startActivity(launch); return; }
-        new AlertDialog.Builder(this).setTitle("需要安装 Shizuku")
+        new com.google.android.material.dialog.MaterialAlertDialogBuilder(this).setTitle("需要安装 Shizuku")
             .setMessage("请从 Shizuku 官方网站安装，并按引导通过无线调试或电脑启动。手机重启后通常需要重新启动 Shizuku。")
             .setPositiveButton("打开官网",(d,w) -> { try { startActivity(new Intent(Intent.ACTION_VIEW,Uri.parse("https://shizuku.rikka.app/download/"))); } catch (Exception e) { setResult("请访问 https://shizuku.rikka.app",true); } }).setNegativeButton("取消",null).show();
     }
@@ -141,8 +172,8 @@ public final class MainActivity extends Activity {
             main.postDelayed(() -> { if (!destroyed && binding) { binding=false; setResult("连接服务超时，请检查 Shizuku 并重试。",true); updateConnection(); } },15000);
         } catch (Exception e) { binding=false; setResult("连接失败："+e.getMessage(),true); updateConnection(); }
     }
-    private void setBusy(boolean value) { busy=value; refresh.setEnabled(!value); list.setEnabled(!value); progress.setVisibility(value?View.VISIBLE:View.GONE); updateConnection(); }
-    private void setResult(String message, boolean error) { result.setText(message); result.setTextColor(error?Color.rgb(176,38,46):INK); addLog(message); }
+    private void setBusy(boolean value) { busy=value; refresh.setEnabled(!value); list.setEnabled(!value); progress.setVisibility(value?View.VISIBLE:View.INVISIBLE); if (empty != null) empty.setVisibility(!value && visible.isEmpty() ? View.VISIBLE : View.GONE); updateConnection(); }
+    private void setResult(String message, boolean error) { result.setText(message); result.setTextColor(error?errorColor:muted); addLog(message); }
     private void addLog(String line) {
         logs.append(new java.text.SimpleDateFormat("HH:mm:ss",Locale.ROOT).format(new Date())).append("  ").append(line).append('\n');
         if (logs.length()>20000) logs.delete(0,logs.length()-16000);
@@ -167,17 +198,19 @@ public final class MainActivity extends Activity {
     }
     private void filter() {
         visible.clear(); String query=search==null?"":search.getText().toString();
-        for (AppEntry app: apps) if (PackageRules.matches(app.name,app.pkg,query)) visible.add(app);
+        for (AppEntry app: apps) if ((appFilter == 0 || (appFilter == 2) == app.system) && PackageRules.matches(app.name,app.pkg,query)) visible.add(app);
         if (adapter!=null) adapter.notifyDataSetChanged();
-        if (count!=null) count.setText(visible.isEmpty() && !apps.isEmpty()?"没有匹配的应用":visible.size()+" / "+apps.size()+" 个应用");
+        if (count!=null) count.setText("应用列表 · " + visible.size() + " / " + apps.size());
+        if (empty!=null) empty.setVisibility(!busy && visible.isEmpty() ? View.VISIBLE : View.GONE);
     }
     private void confirm(AppEntry app) {
         if (busy) return;
         if (!PackageRules.valid(app.pkg) || app.pkg.equals(getPackageName()) || app.pkg.equals("moe.shizuku.privileged.api")) { setResult("此应用不能通过本工具卸载。",true); return; }
         if (service==null || !Shizuku.pingBinder()) { setResult("请先连接并授权 Shizuku。",true); return; }
-        new AlertDialog.Builder(this).setTitle("卸载“"+app.name+"”？")
+        androidx.appcompat.app.AlertDialog dialog = new com.google.android.material.dialog.MaterialAlertDialogBuilder(this).setTitle("卸载“"+app.name+"”？")
             .setMessage(app.pkg+"\n\n将卸载用户 0 下的此应用，并删除其应用数据。"+(app.system?"\n这是系统应用，卸载可能影响系统功能；系统分区中的本体可能仍保留。":"")+"\n\n此操作无法由本工具撤销。")
             .setNegativeButton("取消",null).setPositiveButton("确认卸载",(d,w) -> uninstall(app)).show();
+        dialog.getButton(androidx.appcompat.app.AlertDialog.BUTTON_POSITIVE).setTextColor(errorColor);
     }
     private void uninstall(AppEntry app) {
         if (busy || service==null) return;
@@ -198,7 +231,7 @@ public final class MainActivity extends Activity {
     private void showLogs() {
         TextView body=text(logs.length()==0?"暂无日志":logs.toString(),12,false); body.setTextIsSelectable(true); body.setPadding(dp(16),dp(8),dp(16),dp(8));
         ScrollView scroll=new ScrollView(this); scroll.addView(body);
-        new AlertDialog.Builder(this).setTitle("执行日志").setView(scroll).setPositiveButton("关闭",null)
+        new com.google.android.material.dialog.MaterialAlertDialogBuilder(this).setTitle("执行日志").setView(scroll).setPositiveButton("关闭",null)
             .setNeutralButton("复制",(d,w) -> { ((ClipboardManager)getSystemService(CLIPBOARD_SERVICE)).setPrimaryClip(ClipData.newPlainText("卸载日志",logs.toString())); Toast.makeText(this,"日志已复制",Toast.LENGTH_SHORT).show(); }).show();
     }
     @Override protected void onResume() { super.onResume(); if (shizukuState!=null) updateConnection(); }
@@ -215,18 +248,19 @@ public final class MainActivity extends Activity {
     }
     private final class AppAdapter extends BaseAdapter {
         public int getCount(){return visible.size();} public Object getItem(int p){return visible.get(p);} public long getItemId(int p){return p;}
-        public View getView(int position,View recycled,android.view.ViewGroup parent) {
-            LinearLayout row; ImageView icon; TextView name,pkg;
-            if (recycled==null) {
-                row=new LinearLayout(MainActivity.this); row.setGravity(Gravity.CENTER_VERTICAL); row.setPadding(dp(10),dp(12),dp(10),dp(12));
-                icon=new ImageView(MainActivity.this); row.addView(icon,new LinearLayout.LayoutParams(dp(42),dp(42)));
-                LinearLayout words=column(); words.setPadding(dp(12),0,dp(6),0); name=text("",15,true); pkg=text("",11,false); pkg.setTextColor(Color.rgb(103,115,125));
-                words.addView(name); words.addView(pkg); row.addView(words,new LinearLayout.LayoutParams(0,-2,1)); row.setTag(new View[]{icon,name,pkg});
-            } else row=(LinearLayout)recycled;
-            View[] views=(View[])row.getTag(); icon=(ImageView)views[0]; name=(TextView)views[1]; pkg=(TextView)views[2];
-            AppEntry entry=visible.get(position); if(entry.icon!=null)icon.setImageBitmap(entry.icon);else icon.setImageResource(android.R.drawable.sym_def_app_icon);
-            name.setText(entry.name); pkg.setText(entry.pkg+(entry.system?"  ·  系统应用":""));
-            row.setContentDescription(entry.name+"，"+entry.pkg+(entry.system?"，系统应用":"")); return row;
+        public View getView(int position, View recycled, android.view.ViewGroup parent) {
+            View row = recycled == null ? getLayoutInflater().inflate(R.layout.item_app, parent, false) : recycled;
+            ImageView icon = row.findViewById(R.id.app_icon);
+            TextView name = row.findViewById(R.id.app_name), pkg = row.findViewById(R.id.app_package), type = row.findViewById(R.id.app_type);
+            ImageView action = row.findViewById(R.id.app_action);
+            AppEntry entry = visible.get(position);
+            if(entry.icon!=null) icon.setImageBitmap(entry.icon); else icon.setImageResource(android.R.drawable.sym_def_app_icon);
+            boolean protectedApp = entry.pkg.equals(getPackageName()) || entry.pkg.equals("moe.shizuku.privileged.api") || !PackageRules.valid(entry.pkg);
+            name.setText(entry.name); pkg.setText(entry.pkg);
+            type.setText(protectedApp ? "受保护 · 不可卸载" : entry.system ? "系统应用" : "用户应用");
+            action.setImageResource(protectedApp ? R.drawable.ic_shield : R.drawable.ic_delete);
+            row.setContentDescription(entry.name + "，" + entry.pkg + "，" + type.getText() + (protectedApp ? "" : "，点按卸载") + "，长按复制包名");
+            return row;
         }
     }
 }

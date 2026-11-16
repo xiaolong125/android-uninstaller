@@ -1,0 +1,47 @@
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android" xmlns:app="http://schemas.android.com/apk/res-auto" android:id="@+id/root" android:focusableInTouchMode="true" android:layout_width="match_parent" android:layout_height="match_parent" android:background="?attr/colorSurface">
+ <LinearLayout android:id="@+id/content" android:layout_width="match_parent" android:layout_height="match_parent" android:layout_gravity="center_horizontal" android:orientation="vertical">
+  <com.google.android.material.appbar.MaterialToolbar android:id="@+id/toolbar" android:layout_width="match_parent" android:layout_height="56dp" app:title="卸载助手" app:titleTextAppearance="@style/TextAppearance.Material3.TitleLarge" />
+  <ScrollView android:id="@+id/header_scroll" android:layout_width="match_parent" android:layout_height="wrap_content" android:fillViewport="false" android:overScrollMode="never">
+   <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:orientation="vertical" android:paddingHorizontal="20dp">
+    <com.google.android.material.card.MaterialCardView android:id="@+id/connection_card" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" app:cardCornerRadius="24dp" app:cardElevation="0dp" app:strokeWidth="0dp" app:cardBackgroundColor="?attr/colorSecondaryContainer">
+     <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:padding="20dp" android:orientation="vertical">
+      <LinearLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:gravity="center_vertical">
+       <ImageView android:layout_width="24dp" android:layout_height="24dp" android:src="@drawable/ic_shield" android:importantForAccessibility="no" app:tint="?attr/colorPrimary" />
+       <com.google.android.material.textview.MaterialTextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginStart="10dp" android:text="Shizuku" android:textAppearance="@style/TextAppearance.Material3.LabelLarge" />
+      </LinearLayout>
+      <com.google.android.material.textview.MaterialTextView android:id="@+id/connection_state" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="12dp" android:text="正在检查连接…" android:textAppearance="@style/TextAppearance.Material3.TitleMedium" android:accessibilityLiveRegion="polite" />
+      <com.google.android.material.textview.MaterialTextView android:id="@+id/connection_hint" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="4dp" android:text="连接后可卸载主用户下的应用" android:textAppearance="@style/TextAppearance.Material3.BodyMedium" android:textColor="?attr/colorOnSurfaceVariant" />
+      <LinearLayout android:id="@+id/connection_actions" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="12dp" android:orientation="horizontal" android:gravity="center_vertical">
+       <com.google.android.material.button.MaterialButton android:id="@+id/authorize" android:layout_width="wrap_content" android:layout_height="wrap_content" android:minHeight="48dp" android:text="连接 / 授权" />
+       <com.google.android.material.button.MaterialButton android:id="@+id/open_shizuku" style="@style/Widget.Material3.Button.TextButton" android:layout_width="wrap_content" android:layout_height="wrap_content" android:minHeight="48dp" android:layout_marginStart="8dp" android:text="打开 Shizuku" />
+      </LinearLayout>
+     </LinearLayout>
+    </com.google.android.material.card.MaterialCardView>
+    <com.google.android.material.textfield.TextInputLayout android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="20dp" style="@style/Widget.Material3.TextInputLayout.FilledBox" app:hintEnabled="false" app:boxBackgroundColor="?attr/colorSurfaceVariant" app:boxBackgroundMode="filled" app:boxCornerRadiusTopStart="28dp" app:boxCornerRadiusTopEnd="28dp" app:boxCornerRadiusBottomStart="28dp" app:boxCornerRadiusBottomEnd="28dp" app:boxStrokeWidth="0dp" app:boxStrokeWidthFocused="0dp" app:endIconMode="clear_text" app:startIconDrawable="@drawable/ic_search" app:expandedHintEnabled="false">
+     <com.google.android.material.textfield.TextInputEditText android:id="@+id/search" android:layout_width="match_parent" android:layout_height="wrap_content" android:minHeight="56dp" android:paddingTop="14dp" android:paddingBottom="14dp" android:hint="搜索应用名称或包名" android:textColorHint="?attr/colorOnSurfaceVariant" android:singleLine="true" android:inputType="textNoSuggestions" android:imeOptions="actionSearch" android:textSize="16sp" />
+    </com.google.android.material.textfield.TextInputLayout>
+    <HorizontalScrollView android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:scrollbars="none">
+     <com.google.android.material.chip.ChipGroup android:id="@+id/filters" android:layout_width="wrap_content" android:layout_height="wrap_content" app:singleLine="true" app:singleSelection="true" app:selectionRequired="true" app:checkedChip="@id/filter_all" app:chipSpacingHorizontal="8dp">
+      <com.google.android.material.chip.Chip android:id="@+id/filter_all" style="@style/AppFilterChip" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="全部" />
+      <com.google.android.material.chip.Chip android:id="@+id/filter_user" style="@style/AppFilterChip" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="用户应用" />
+      <com.google.android.material.chip.Chip android:id="@+id/filter_system" style="@style/AppFilterChip" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="系统应用" />
+     </com.google.android.material.chip.ChipGroup>
+    </HorizontalScrollView>
+    <com.google.android.material.textview.MaterialTextView android:id="@+id/result" android:layout_width="match_parent" android:layout_height="wrap_content" android:paddingVertical="8dp" android:textAppearance="@style/TextAppearance.Material3.BodySmall" android:textColor="?attr/colorOnSurfaceVariant" android:accessibilityLiveRegion="polite" />
+   </LinearLayout>
+  </ScrollView>
+  <LinearLayout android:layout_width="match_parent" android:layout_height="48dp" android:paddingStart="24dp" android:paddingEnd="12dp" android:gravity="center_vertical">
+   <com.google.android.material.textview.MaterialTextView android:id="@+id/count" android:layout_width="0dp" android:layout_height="wrap_content" android:layout_weight="1" android:text="应用列表" android:textAppearance="@style/TextAppearance.Material3.LabelLarge" android:textColor="?attr/colorOnSurfaceVariant" />
+   <com.google.android.material.button.MaterialButton android:id="@+id/refresh" style="@style/Widget.Material3.Button.TextButton" android:layout_width="wrap_content" android:layout_height="48dp" android:text="刷新" />
+  </LinearLayout>
+  <com.google.android.material.progressindicator.LinearProgressIndicator android:id="@+id/progress" android:layout_width="match_parent" android:layout_height="wrap_content" android:indeterminate="true" android:visibility="invisible" app:trackThickness="3dp" />
+  <FrameLayout android:layout_width="match_parent" android:layout_height="0dp" android:layout_weight="1">
+   <ListView android:id="@+id/app_list" android:layout_width="match_parent" android:layout_height="match_parent" android:divider="@null" android:clipToPadding="false" android:paddingBottom="16dp" android:scrollbarStyle="outsideOverlay" />
+   <LinearLayout android:id="@+id/empty" android:layout_width="match_parent" android:layout_height="match_parent" android:orientation="vertical" android:gravity="center" android:padding="24dp" android:visibility="gone">
+    <ImageView android:layout_width="40dp" android:layout_height="40dp" android:src="@drawable/ic_search" app:tint="?attr/colorOnSurfaceVariant" android:importantForAccessibility="no" />
+    <com.google.android.material.textview.MaterialTextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="16dp" android:text="没有匹配的应用" android:textAppearance="@style/TextAppearance.Material3.TitleMedium" />
+    <com.google.android.material.textview.MaterialTextView android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginTop="8dp" android:text="试试其他名称、包名或筛选条件" android:textAppearance="@style/TextAppearance.Material3.BodyMedium" android:textColor="?attr/colorOnSurfaceVariant" />
+   </LinearLayout>
+  </FrameLayout>
+ </LinearLayout>
+</FrameLayout>
